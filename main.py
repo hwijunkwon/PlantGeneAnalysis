@@ -18,13 +18,17 @@ Kmer = 10
 def makeFamilyFragmentDictionaries():#각 Family별 gene Dictionary 생성
     familyNames.extend( [f for f in listdir(gene_path) if isdir(join(gene_path, f))] )#전역변수 gene_path 폴더안에 있는 폴더 검색
     paths = [join(gene_path, f) for f in familyNames]
-    dictionariesForEachFamily = []
-    for path in paths:
+    sequenceFragmentForEachFamily = [] #family별 단일 sequence의 fragment set
+    dictionariesForEachFamily = [] #family별 전체 fragment dictionary
+
+    for path in paths:#paths에는 family directory folder 경로
         sequences = makeFamilySequences(path)
-        dictionary = makeFragmentFrequencyDict(sequences)
+        dictionary, fragmentForEachSequence = makeFragmentFrequencyDict(sequences)
+        sequenceFragmentForEachFamily.append(fragmentForEachSequence)
         dictionary = {k: v for k, v in sorted(dictionary.items(), key=lambda item: item[1], reverse=True)}
         dictionariesForEachFamily.append(dictionary)
-    return dictionariesForEachFamily
+    print(sequenceFragmentForEachFamily)
+    return dictionariesForEachFamily, sequenceFragmentForEachFamily
 
 #makeFamilyDictionaries() 에서 사용
 def makeFamilySequences(family_dir_loc):#각 Family별 sequence 리스트 생성
@@ -35,22 +39,28 @@ def makeFamilySequences(family_dir_loc):#각 Family별 sequence 리스트 생성
         with open(path, "r") as f:
             head, tail = f.read().split('\n', 1)#Fasta format 문서 첫줄제거
             sequence = tail.replace("\n", "")#한줄로
-            #print(sequence)
             sequences.append(sequence)
     return sequences
 
 #makeFamilyDictionaries() 에서 사용
 def makeFragmentFrequencyDict(sequences):#여러개의 sequence에 있는 fragment를 K의 크기로 잘라서 사전에 추가, 사전에는 fragment의 발생 빈도 기록
+    fragmentForEachSequence = []
     dictionary = dict()#사전 생성
     for sequence in sequences:
         length = len(sequence)
+        fragments = set()
         for i in range(0, length - Kmer + 1):
             frag = sequence[i: i + Kmer]#k개씩 자름
             if frag in dictionary:
                 dictionary[frag] += 1#이미 있으면 +1
             else:
                 dictionary[frag] = 1#없으면 1
-    return dictionary #key: fragment, value: fragment 발생 빈도
+                
+            fragments.add(frag)
+
+        fragmentForEachSequence.append(fragments)
+    #print(fragmentForEachSequence)
+    return dictionary, fragmentForEachSequence  #dictionary - key: fragment, value: fragment 발생 빈도,  fragmentForEachSequence - [{sequence별 fragment}, {} ...]
 
 def makeOverlappingSeqeunceResult(dictionariesForEachFamily):#패밀리별 fragment를 입력받아 각 fragment가 각각의 패밀리에 속해 있는지 검사
     result = []
@@ -179,7 +189,7 @@ def tSNE_Visualization(X,y):
 
 #clustering
 #K-means clustering
-def kmeans(x, num_cluster):
+def kmeans(x, y, num_cluster):
     # k means 모델 생성
     km = KMeans(n_clusters=num_cluster)
     km.fit(x)
@@ -189,10 +199,29 @@ def kmeans(x, num_cluster):
     print("accuracy score:" + str(accuracy))
     print(classification_report(y, y_pred, target_names=familyNames))
 
+    pca = PCA(n_components=2).fit(x)
+    pca_2d = pca.transform(x)
+
+    plt.scatter(pca_2d[:, 0], pca_2d[:, 1], c=y, s=50, cmap='viridis', alpha=0.5)
+    centers = km.cluster_centers_
+    plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.5)
+    plt.show()
+
 #Hierarchical clustering
+def hierarchical(X):
+    from scipy.cluster.hierarchy import dendrogram, linkage
+    linked = linkage(X, 'single')
+    labelList = range(1, 11)
+    plt.figure(figsize=(10, 7))
+    dendrogram(linked,
+               orientation='top',
+               labels=labelList,
+               distance_sort='descending',
+               show_leaf_counts=True)
+    plt.show()
 
 #fragment 발생 빈도 기록 dictionary 생성
-dictionariesForEachFamily = makeFamilyFragmentDictionaries()
+dictionariesForEachFamily, sequenceFragmentForEachFamily = makeFamilyFragmentDictionaries()
 makeFragmentFrequencyDictToCSV(dictionariesForEachFamily)
 
 #패밀리별 fragment를 입력받아 각 fragment가 각각의 패밀리에 속해 있는지 검사 후 결과 출력
@@ -200,7 +229,7 @@ result = makeOverlappingSeqeunceResult(dictionariesForEachFamily)
 makeOverlappingResultToCSV(result)
 
 #clustering을 위한 전처리
-n_frequency = 1
+n_frequency = 2
 print("fragment frequency >= " + str(n_frequency))
 x,y = preprocessingForClustering(dictionariesForEachFamily, n_frequency)
 
@@ -211,7 +240,4 @@ x,y = preprocessingForClustering(dictionariesForEachFamily, n_frequency)
 
 #clustering
 #kmeans
-
-kmeans(x, len(familyNames))
-
-#test
+#kmeans(x,y, 7)
