@@ -125,7 +125,8 @@ def preprocessingForClustering(dictForEachFam):
         print("max_frequency = " + str(max_frequency) + ", frequency: " + str(frequency))
 
         for key, value in dictForEachFam[i].items():
-            if value >= frequency:#파라미터로 준 frequency이상의 값들만 추출
+            #if value >= 2:
+            if value >= frequency and value > 1:
                 x.append( convertFragmentToNumber(key) )
                 y.append(i)
     x = np.array(x)
@@ -142,13 +143,16 @@ def PCA_2D_Visualization(X, y, figuretitle):
     X_r = pca.fit(X).transform(X)
     # Percentage of variance explained for each components
     print('explained variance ratio (first two components): %s' % str(pca.explained_variance_ratio_))
-    plt.figure()
+    fig = plt.figure()
     colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
     lw = 2
-    for color, i, target_name in zip(colors, [0,1,2,3,4,5,6], target_names):
+    for color, i, target_name in zip(colors, [0,1,2,3,4,5], target_names):
+        plt.subplot(2,3,i+1)
         plt.scatter(X_r[y == i, 0], X_r[y == i, 1], color=color, alpha=.8, lw=lw, label=target_name)
-    plt.legend(loc='best', shadow=False, scatterpoints=1)
-    plt.title(figuretitle)
+        plt.title(target_name)
+
+    fig.suptitle(figuretitle)
+    fig.tight_layout(pad=2)
     plt.show()
 
 def PCA_3D_Visualization(X, y):
@@ -224,19 +228,23 @@ def hierarchical(X):
                show_leaf_counts=True)
     plt.show()
 
-#fragment 발생 빈도 기록 dictionary 생성
+#visualization
+#for i in range(3,21):
+Kmer = 11
+
+# fragment 발생 빈도 기록 dictionary 생성
 dictionariesForEachFamily, sequenceFragmentForEachFamily = makeFamilyFragmentDictionaries()
 makeFragmentFrequencyDictToCSV(dictionariesForEachFamily)
 
-#패밀리별 fragment를 입력받아 각 fragment가 각각의 패밀리에 속해 있는지 검사 후 결과 출력
+# 패밀리별 fragment를 입력받아 각 fragment가 각각의 패밀리에 속해 있는지 검사 후 결과 출력
 result = makeOverlappingSeqeunceResult(dictionariesForEachFamily)
 makeOverlappingResultToCSV(result)
 
-#clustering을 위한 전처리
-x,y = preprocessingForClustering(dictionariesForEachFamily)
+# clustering을 위한 전처리
+x, y = preprocessingForClustering(dictionariesForEachFamily)
 
-#visualization
-PCA_2D_Visualization(x, y, "PCA")
+PCA_2D_Visualization(x, y, "PCA, kmer = " + str(Kmer))
+
 #PCA_3D_Visualization(x,y)
 #tSNE_Visualization()
 
