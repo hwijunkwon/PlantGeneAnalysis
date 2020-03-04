@@ -129,7 +129,7 @@ def preprocessingForClustering(dictForEachFam):
             if value >= frequency and value > 1:
                 x.append( convertFragmentToNumber(key) )
                 y.append(i)
-    x = np.array(x)
+    x = np.array(x) 
     y = np.array(y)
     #print(x)
     #print(y)
