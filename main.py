@@ -27,7 +27,7 @@ def makeFamilyFragmentDictionaries():#각 Family별 gene Dictionary 생성
         sequenceFragmentForEachFamily.append(fragmentForEachSequence)
         dictionary = {k: v for k, v in sorted(dictionary.items(), key=lambda item: item[1], reverse=True)}
         dictionariesForEachFamily.append(dictionary)
-    print(sequenceFragmentForEachFamily)
+    #print(sequenceFragmentForEachFamily)
     return dictionariesForEachFamily, sequenceFragmentForEachFamily
 
 #makeFamilyDictionaries() 에서 사용
@@ -51,12 +51,13 @@ def makeFragmentFrequencyDict(sequences):#여러개의 sequence에 있는 fragme
         fragments = set()
         for i in range(0, length - Kmer + 1):
             frag = sequence[i: i + Kmer]#k개씩 자름
-            if frag in dictionary:
-                dictionary[frag] += 1#이미 있으면 +1
-            else:
-                dictionary[frag] = 1#없으면 1
-                
             fragments.add(frag)
+
+        for fragment in fragments:
+            if fragment in dictionary:
+                dictionary[fragment] += 1#이미 있으면 +1
+            else:
+                dictionary[fragment] = 1#없으면 1
 
         fragmentForEachSequence.append(fragments)
     #print(fragmentForEachSequence)
@@ -115,10 +116,14 @@ def AGTCSwitcher(char):
 #clustering을 위한 함수
 #전처리
 # dictForEachFam:makeFamilyFragmentDictionaries() 결과 , frequency: 추출할 유전자 빈도수, 해당 빈도 이상의 fragment를 추출하기 위한 값
-def preprocessingForClustering(dictForEachFam, frequency):
+def preprocessingForClustering(dictForEachFam):
     x = []
     y = []
     for i in range(len(dictForEachFam)):
+        max_frequency = max(dictForEachFam[i].values())
+        frequency = max_frequency/2
+        print("max_frequency = " + str(max_frequency) + ", frequency: " + str(frequency))
+
         for key, value in dictForEachFam[i].items():
             if value >= frequency:#파라미터로 준 frequency이상의 값들만 추출
                 x.append( convertFragmentToNumber(key) )
@@ -136,8 +141,7 @@ def PCA_2D_Visualization(X, y, figuretitle):
     pca = PCA(n_components=2)
     X_r = pca.fit(X).transform(X)
     # Percentage of variance explained for each components
-    print('explained variance ratio (first two components): %s'
-          % str(pca.explained_variance_ratio_))
+    print('explained variance ratio (first two components): %s' % str(pca.explained_variance_ratio_))
     plt.figure()
     colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
     lw = 2
@@ -229,12 +233,10 @@ result = makeOverlappingSeqeunceResult(dictionariesForEachFamily)
 makeOverlappingResultToCSV(result)
 
 #clustering을 위한 전처리
-n_frequency = 2
-print("fragment frequency >= " + str(n_frequency))
-x,y = preprocessingForClustering(dictionariesForEachFamily, n_frequency)
+x,y = preprocessingForClustering(dictionariesForEachFamily)
 
 #visualization
-#PCA_2D_Visualization(x, y, "PCA, frequency => "+ str(n_frequency))
+PCA_2D_Visualization(x, y, "PCA")
 #PCA_3D_Visualization(x,y)
 #tSNE_Visualization()
 
